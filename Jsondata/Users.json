@@ -1,0 +1,47 @@
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "is_admin": true
+  },
+  {
+    "id": 2,
+    "username": "adam2"
+  },
+  {
+    "id": 3,
+    "username": "adam3"
+  },
+  {
+    "id": 4,
+    "username": "adam4"
+  },
+  {
+    "id": 5,
+    "username": "adam5"
+  },
+  {
+    "id": 6,
+    "username": "adam10"
+  },
+  {
+    "id": 7,
+    "username": "adam11"
+  },
+  {
+    "id": 8,
+    "username": "adam12"
+  },
+  {
+    "id": 9,
+    "username": "user2"
+  },
+  {
+    "id": 10,
+    "username": "user1"
+  },
+  {
+    "id": 11,
+    "username": "user"
+  }
+]
