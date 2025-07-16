@@ -1,14 +1,11 @@
 import threading
-import psycopg2
+import sqlite3
 import time
 
 
 class PooledConnection:
-    def __init__(self,database, host='localhost',user='postgres', password='admin'):
-        self.host = host
+    def __init__(self,database="database_file.db"):
         self.database = database
-        self.user = user
-        self.password = password
         self.conn=self._create_connection()
         self.in_use=False
         self.last_used_time=None
@@ -18,15 +15,16 @@ class PooledConnection:
         Returns:
             Object type connection
         """
-        return psycopg2.connect( #establish connection
-            host=self.host,
-            database=self.database,
-            user=self.user,
-            password=self.password
-        )
+        try:
+            return sqlite3.connect(self.database)
+        except sqlite3.OperationalError as e:
+            print("Failed to open database:", e)
     
     def cursor(self):
         return self.conn.cursor()
+    
+    def commit(self):
+        self.conn.commit()
     
 class ConnectionPool:
     """
@@ -37,15 +35,12 @@ class ConnectionPool:
         min_connection (int): Minimum number of connections to keep in pool.
         max_connection (int): Maximum number of connections allowed in pool.
     """
-    def __init__(self,database, host='localhost' , user='postgres', password='admin'):
+    def __init__(self,database="database_file.db"):
         self.min_connection=5
         self.max_connection=99
         self.conn_idle_timeout=2 # Max idle time in seconds before closing connections
 
-        self.host = host
         self.database = database
-        self.user = user
-        self.password = password
 
         self.lock = threading.Lock()
         self.connections= [PooledConnection(self.database) for _ in range(self.min_connection)]
@@ -79,9 +74,9 @@ class ConnectionPool:
         with self.lock: 
             STATUS_INTRANS = 2
             if connection in self.connections:
-                if connection.conn.status == STATUS_INTRANS:
-                    print("⚠️ Warning: Connection released with open transaction! Autocommit !.")
-                    connection.conn.commit()
+                # if connection.conn.status == STATUS_INTRANS:
+                #     print("⚠️ Warning: Connection released with open transaction! Autocommit !.")
+                #     connection.conn.commit()
 
                 connection.in_use=False
                 connection.last_used_time=time.time()
@@ -107,10 +102,11 @@ class ConnectionPool:
 
                 for conn in (self.connections[5:]):
                     
-                    #delete broken connection 
-                    if conn.conn.closed !=0 and conn.in_use:
-                        l_deleted_conn.append(conn)
-                        continue # interrupt current iteration
+                    # #delete broken connection 
+                    # if conn.conn.closed !=0 and conn.in_use:
+                    #     l_deleted_conn.append(conn)
+                    #     continue # interrupt current iteration
+
                     #check not used connection and remove when they are not used, but keep minial connection.
                     if not conn.in_use:
                         if conn.last_used_time is None or current_time-conn.last_used_time > self.conn_idle_timeout:
