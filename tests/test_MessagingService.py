@@ -4,22 +4,20 @@ import json
 from my_classes.DataBaseService import DataBaseService
 from my_classes.MessagingService import MessagingService
 from my_classes.UserMenager import UserMenager
-
+from my_classes.dbConnectionPool import ConnectionPool
 class Test(unittest.TestCase):
 
     #classmethod,  to run only once connection to temp database
     @classmethod
     def setUpClass(cls):
-        cls.conn=psycopg2.connect(
-                host='localhost',
-                database='test_mailbox',       
-                user='postgres',      
-                password='admin')
+
+        cls.cp=ConnectionPool("test.db")
+        cls.conn=cls.cp.get_connection()
         cls.curs=cls.conn.cursor()
         
     
     def setUp(self):   
-        self.database=DataBaseService(database="test_mailbox")
+        self.database=DataBaseService(database="test.db")
         self.reset_database()
         self.service=MessagingService(self.database)
         self.user=UserMenager(self.database)

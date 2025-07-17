@@ -13,6 +13,7 @@ class DataBaseService():
         self.password = password     
         self.CP=ConnectionPool(self.database)
         self._ensure_tables()
+
     @contextmanager #to work with with
     def _get_cursor(self): 
         conn = self.CP.get_connection()
@@ -56,13 +57,13 @@ class DataBaseService():
 
     def create_user_check(self, username: str):
         with self._get_cursor() as curr:
-            curr.execute("SELECT id FROM users WHERE username = %s;", (username,))
+            curr.execute("SELECT id FROM users WHERE username = ?;", (username,))
             return curr.fetchone() is None # if fetchone false then return true
 
     def create_user(self, username: str, password: str):
         try:
             with self._get_cursor() as curr:
-                curr.execute("INSERT INTO users (username, password_hash) VALUES (%s, %s);", (username, password))
+                curr.execute("INSERT INTO users (username, password_hash) VALUES (?, ?);", (username, password))
             return (True, "User created")
         except UniqueViolation:
             return (False, "User already exists")
@@ -77,7 +78,7 @@ class DataBaseService():
             otherwise None.
         """
         with self._get_cursor() as curr:
-            curr.execute("SELECT id, is_admin, password_hash FROM users WHERE username = %s;", (username,))
+            curr.execute("SELECT id, is_admin, password_hash FROM users WHERE username = ?;", (username,))
             return curr.fetchone()
 
     def password_change(self, id_user: int, password: str):
@@ -88,7 +89,7 @@ class DataBaseService():
         """
         try:
             with self._get_cursor() as curr:
-                curr.execute("UPDATE users SET password_hash = %s WHERE id = %s;", (password, id_user))
+                curr.execute("UPDATE users SET password_hash = ? WHERE id = ?;", (password, id_user))
             return (True, "Password updated successfully")
         except psycopg2.Error as e:
             print("Database error:", e)
@@ -99,13 +100,13 @@ class DataBaseService():
         Returns: int or False if user not found
         """
         with self._get_cursor() as curr:
-            curr.execute("SELECT id FROM users WHERE username = %s;", (username,))
+            curr.execute("SELECT id FROM users WHERE username = ?;", (username,))
             result = curr.fetchone()
             return result[0] if result else False
 
     def get_user_by_id(self, id: int):
         with self._get_cursor() as curr:
-            curr.execute("SELECT username FROM users WHERE id = %s;", (id,))
+            curr.execute("SELECT username FROM users WHERE id = ?;", (id,))
             result = curr.fetchone()
             return result[0] if result else None
 
@@ -116,7 +117,7 @@ class DataBaseService():
 
     def msg_count(self, id_user: int):
         with self._get_cursor() as curr:
-            curr.execute("SELECT COUNT(*) FROM messages WHERE receiver_id = %s;", (id_user,))
+            curr.execute("SELECT COUNT(*) FROM messages WHERE receiver_id = ?;", (id_user,))
             return curr.fetchone()[0] #first argument of fuccntion fetchone
 
     def load_message(self, id_receiver: int):
@@ -135,7 +136,7 @@ class DataBaseService():
                 FROM messages
                 JOIN users AS us ON messages.sender_id = us.id
                 JOIN users AS ur ON messages.receiver_id = ur.id
-                WHERE ur.id = %s;
+                WHERE ur.id = ?;
             """, (id_receiver,))
             data = curr.fetchall()
             result = []
@@ -154,7 +155,7 @@ class DataBaseService():
         """
         try:
             with self._get_cursor() as curr:
-                curr.execute("INSERT INTO messages (receiver_id, sender_id, message) VALUES (%s, %s, %s);", (receiver, sender, content))
+                curr.execute("INSERT INTO messages (receiver_id, sender_id, message) VALUES (?, ?, ?);", (receiver, sender, content))
             return True
         except:
             return False
@@ -167,7 +168,7 @@ class DataBaseService():
         """
         try:
             with self._get_cursor() as curr:
-                curr.execute("DELETE FROM messages WHERE receiver_id = %s;", (user,))
+                curr.execute("DELETE FROM messages WHERE receiver_id = ?;", (user,))
             return True
         except:
             return False
@@ -180,7 +181,7 @@ class DataBaseService():
         """
         try:
             with self._get_cursor() as curr:
-                curr.execute("DELETE FROM messages WHERE id = %s;", (id,))
+                curr.execute("DELETE FROM messages WHERE id = ?;", (id,))
             return True
         except:
             return False

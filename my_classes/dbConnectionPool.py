@@ -26,9 +26,15 @@ class PooledConnection:
     def commit(self):
         self.conn.commit()
     
+    def close(self):
+        self.conn.close()
 class ConnectionPool:
     """
     Custom connection pool for PostgreSQL.
+
+    Args:
+        database (str, optional): SQLite database filename. Defaults to "database_file.db".
+
 
     Attributes:
         conn_idle_timeout (int): Timeout (in seconds) after which connections are closed.
