@@ -35,20 +35,22 @@ class DataBaseService():
         with self._get_cursor() as curr:
             curr.execute("""
                 CREATE TABLE IF NOT EXISTS users (
-                    id BIGSERIAL PRIMARY KEY,
-                    username VARCHAR(50) UNIQUE NOT NULL,
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
                     password_hash TEXT NOT NULL,
-                    is_admin BOOL DEFAULT FALSE
+                    is_admin INTEGER DEFAULT 0
                 );
             """)
 
             curr.execute("""
-                CREATE TABLE IF NOT EXISTS messages (
-                    id BIGSERIAL PRIMARY KEY,
+                 CREATE TABLE IF NOT EXISTS messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                     receiver_id INTEGER REFERENCES users(id),
                     sender_id INTEGER REFERENCES users(id),
-                    message VARCHAR(255) NOT NULL,
-                    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    message TEXT NOT NULL,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
                 );
             """)
 

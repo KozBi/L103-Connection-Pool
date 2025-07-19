@@ -39,7 +39,7 @@ class TestUserMenagerIntegration(unittest.TestCase):
             if u.get("is_admin"):
                 is_adm=u.get("is_admin")
             else: is_adm=None
-            cls.curs.execute(""" INSERT INTO users (username, password_hash, is_admin) VALUES (%s,%s,%s);""", 
+            cls.curs.execute(""" INSERT INTO users (username, password_hash, is_admin) VALUES (?,?,?);""", 
                             (u["username"],hashed, is_adm)) 
 
         ### messages
@@ -50,7 +50,7 @@ class TestUserMenagerIntegration(unittest.TestCase):
                 receiver_id=m.get("receiver")
                 sender_id=m.get("sender")
                 content=m.get("content")
-                cls.curs.execute(""" INSERT INTO messages (receiver_id, sender_id, message) VALUES (%s,%s,%s);""", 
+                cls.curs.execute(""" INSERT INTO messages (receiver_id, sender_id, message) VALUES (?,?,?);""", 
                             (receiver_id,sender_id, content))
                 
         cls.conn.commit()

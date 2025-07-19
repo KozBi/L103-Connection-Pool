@@ -14,6 +14,29 @@ class Test(unittest.TestCase):
         cls.cp=ConnectionPool("test.db")
         cls.conn=cls.cp.get_connection()
         cls.curs=cls.conn.cursor()
+
+        cls.curs.execute("PRAGMA foreign_keys = ON;")
+
+        cls.curs.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    is_admin INTEGER DEFAULT 0
+                );
+            """)
+        cls.curs.execute("""
+                CREATE TABLE IF NOT EXISTS messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    receiver_id INTEGER REFERENCES users(id),
+                    sender_id INTEGER REFERENCES users(id),
+                    message TEXT NOT NULL,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+            """)
+        cls.conn.commit()
         
     
     def setUp(self):   
@@ -30,7 +53,7 @@ class Test(unittest.TestCase):
     #reset test_mailbox each tim when test is called.
     def reset_database(self):
         #reset whole table
-        self.curs.execute("TRUNCATE TABLE users RESTART IDENTITY CASCADE;")
+        self.curs.execute("DELETE FROM users;")
         passwords=["admin","bob","adam3"]
         with open("tests/fixtures/test_Users.json", "r", encoding="utf-8" ) as f:
             users = json.load(f)
@@ -40,18 +63,18 @@ class Test(unittest.TestCase):
             if u.get("is_admin"):
                 is_adm=u.get("is_admin")
             else: is_adm=None
-            self.curs.execute(""" INSERT INTO users (username, password_hash, is_admin) VALUES (%s,%s,%s);""", 
+            self.curs.execute(""" INSERT INTO users (username, password_hash, is_admin) VALUES (?,?,?);""", 
                             (u["username"],hashed, is_adm)) 
 
         ### messages
-        self.curs.execute("TRUNCATE TABLE messages RESTART IDENTITY CASCADE;")
+        self.curs.execute("DELETE FROM messages;")
         with open("tests/fixtures/test_Messages.json", "r", encoding="utf-8" ) as f:
             messages = json.load(f)
             for m in messages:
                 receiver_id=m.get("receiver")
                 sender_id=m.get("sender")
                 content=m.get("content")
-                self.curs.execute(""" INSERT INTO messages (receiver_id, sender_id, message) VALUES (%s,%s,%s);""", 
+                self.curs.execute(""" INSERT INTO messages (receiver_id, sender_id, message) VALUES (?,?,?)""", 
                             (receiver_id,sender_id, content))
                 
         self.conn.commit()
