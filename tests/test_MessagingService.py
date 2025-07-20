@@ -1,5 +1,5 @@
 import unittest
-import psycopg2
+#import psycopg2
 import json
 from my_classes.DataBaseService import DataBaseService
 from my_classes.MessagingService import MessagingService
@@ -8,47 +8,54 @@ from my_classes.dbConnectionPool import ConnectionPool
 class Test(unittest.TestCase):
 
     #classmethod,  to run only once connection to temp database
-    @classmethod
-    def setUpClass(cls):
+    # @classmethod
+    # def setUpClass(cls):
 
-        cls.cp=ConnectionPool("test.db")
-        cls.conn=cls.cp.get_connection()
-        cls.curs=cls.conn.cursor()
+    #     cls.cp=ConnectionPool("test.db")
+    #     cls.conn=cls.cp.get_connection()
+    #     cls.curs=cls.conn.cursor()
 
-        cls.curs.execute("PRAGMA foreign_keys = ON;")
+    #     cls.curs.execute("PRAGMA foreign_keys = ON;")
 
-        cls.curs.execute("""
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT UNIQUE NOT NULL,
-                    password_hash TEXT NOT NULL,
-                    is_admin INTEGER DEFAULT 0
-                );
-            """)
-        cls.curs.execute("""
-                CREATE TABLE IF NOT EXISTS messages (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    receiver_id INTEGER REFERENCES users(id),
-                    sender_id INTEGER REFERENCES users(id),
-                    message TEXT NOT NULL,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
-                    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
-                );
-            """)
-        cls.conn.commit()
+    #     cls.curs.execute("""
+    #             CREATE TABLE IF NOT EXISTS users (
+    #                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+    #                 username TEXT UNIQUE NOT NULL,
+    #                 password_hash TEXT NOT NULL,
+    #                 is_admin INTEGER DEFAULT 0
+    #             );
+    #         """)
+    #     cls.curs.execute("""
+    #             CREATE TABLE IF NOT EXISTS messages (
+    #                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+    #                 receiver_id INTEGER REFERENCES users(id),
+    #                 sender_id INTEGER REFERENCES users(id),
+    #                 message TEXT NOT NULL,
+    #                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    #                 FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+    #                 FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
+    #             );
+    #         """)
+    #     cls.conn.commit()
         
     
     def setUp(self):   
+        self.cp=ConnectionPool("test.db")
+        self.conn=self.cp.get_connection()
+        self.curs=self.conn.cursor()
+
         self.database=DataBaseService(database="test.db")
         self.reset_database()
         self.service=MessagingService(self.database)
         self.user=UserMenager(self.database)
 
          
-    @classmethod
-    def tearDownClass(cls):
-        cls.conn.close()
+    # @classmethod
+    # def tearDownClass(self):
+    #     self.conn.close()
+    # @classmethod
+    # def tearDownClass(cls):
+    #     cls.conn.close()
 
     #reset test_mailbox each tim when test is called.
     def reset_database(self):
@@ -65,7 +72,7 @@ class Test(unittest.TestCase):
             else: is_adm=None
             self.curs.execute(""" INSERT INTO users (username, password_hash, is_admin) VALUES (?,?,?);""", 
                             (u["username"],hashed, is_adm)) 
-
+            
         ### messages
         self.curs.execute("DELETE FROM messages;")
         with open("tests/fixtures/test_Messages.json", "r", encoding="utf-8" ) as f:
@@ -74,8 +81,16 @@ class Test(unittest.TestCase):
                 receiver_id=m.get("receiver")
                 sender_id=m.get("sender")
                 content=m.get("content")
+                print(receiver_id)
+                print(sender_id)
+                print(content)
+                
+                self.curs.execute(""" SELECT * FROM users""")
+                print(self.curs.fetchall())
+                print(f"Inserted user {u['username']} with ID {self.curs.lastrowid}")
                 self.curs.execute(""" INSERT INTO messages (receiver_id, sender_id, message) VALUES (?,?,?)""", 
                             (receiver_id,sender_id, content))
+                
                 
         self.conn.commit()
 
