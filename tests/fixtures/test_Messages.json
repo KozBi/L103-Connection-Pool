@@ -1,32 +1,32 @@
 [
   {
-    "receiver": 1,
-    "sender" :2,
+    "receiver": "admin",
+    "sender" :"bob",
     "content" :"HElloo 1 it's 2 Messagne number 1"
   },
   {
-    "receiver": 1,
-    "sender" :2,
+    "receiver": "admin",
+    "sender" :"bob",
     "content" :"HElloo 1 it's 2 Messagne number 2"
   },
   {
-    "receiver": 1,
-    "sender" :2,
+    "receiver": "admin",
+    "sender" :"bob",
     "content" :"HElloo 1 it's 2 Messagne number 3"
   },
     {
-    "receiver": 1,
-    "sender" :3,
+    "receiver": "admin",
+    "sender" :"adam3",
     "content" :"HElloo 1 it's 3 Messagne number 1"
   },
   {
-    "receiver": 1,
-    "sender" :3,
+    "receiver": "admin",
+    "sender" :"adam3",
     "content" :"HElloo 1 it's 3 Messagne number 2"
   },
     {
-    "receiver": 2,
-    "sender" :1,
+    "receiver": "bob",
+    "sender" :"admin",
     "content" :"hello bob it's admin Messagne number 1"
   }
 ]

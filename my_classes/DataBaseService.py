@@ -6,11 +6,9 @@ import hashlib
 from my_classes.dbConnectionPool import ConnectionPool
 
 class DataBaseService():
-    def __init__(self, host='localhost', database='mailbox', user='postgres', password='admin'):
-        self.host = host
-        self.database = database
-        self.user = user
-        self.password = password     
+    def __init__(self, database='mailbox'):
+
+        self.database = database    
         self.CP=ConnectionPool(self.database)
         self._ensure_tables()
 
@@ -143,7 +141,7 @@ class DataBaseService():
             data = curr.fetchall()
             result = []
             for id, sender, receiver, content, time in data:
-                formatted_time = time.strftime("%Y-%m-%d %H:%M:%S")
+                formatted_time = time ##s
                 message = self._format_messages(id, sender, content, formatted_time)
                 result.append(message)
             return result

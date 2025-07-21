@@ -8,35 +8,35 @@ from my_classes.dbConnectionPool import ConnectionPool
 class Test(unittest.TestCase):
 
     #classmethod,  to run only once connection to temp database
-    # @classmethod
-    # def setUpClass(cls):
+    @classmethod
+    def setUpClass(cls):
 
-    #     cls.cp=ConnectionPool("test.db")
-    #     cls.conn=cls.cp.get_connection()
-    #     cls.curs=cls.conn.cursor()
+        cls.cp=ConnectionPool("test.db")
+        cls.conn=cls.cp.get_connection()
+        cls.curs=cls.conn.cursor()
 
-    #     cls.curs.execute("PRAGMA foreign_keys = ON;")
+        cls.curs.execute("PRAGMA foreign_keys = ON;")
 
-    #     cls.curs.execute("""
-    #             CREATE TABLE IF NOT EXISTS users (
-    #                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-    #                 username TEXT UNIQUE NOT NULL,
-    #                 password_hash TEXT NOT NULL,
-    #                 is_admin INTEGER DEFAULT 0
-    #             );
-    #         """)
-    #     cls.curs.execute("""
-    #             CREATE TABLE IF NOT EXISTS messages (
-    #                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-    #                 receiver_id INTEGER REFERENCES users(id),
-    #                 sender_id INTEGER REFERENCES users(id),
-    #                 message TEXT NOT NULL,
-    #                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    #                 FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
-    #                 FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
-    #             );
-    #         """)
-    #     cls.conn.commit()
+        cls.curs.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    is_admin INTEGER DEFAULT 0
+                );
+            """)
+        cls.curs.execute("""
+                CREATE TABLE IF NOT EXISTS messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    receiver_id INTEGER REFERENCES users(id),
+                    sender_id INTEGER REFERENCES users(id),
+                    message TEXT NOT NULL,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+            """)
+        cls.conn.commit()
         
     
     def setUp(self):   
@@ -49,23 +49,21 @@ class Test(unittest.TestCase):
         self.service=MessagingService(self.database)
         self.user=UserMenager(self.database)
 
-         
-    # @classmethod
-    # def tearDownClass(self):
-    #     self.conn.close()
-    # @classmethod
-    # def tearDownClass(cls):
-    #     cls.conn.close()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.conn.close()
 
     #reset test_mailbox each tim when test is called.
     def reset_database(self):
         #reset whole table
         self.curs.execute("DELETE FROM users;")
+ #        id must be reset to 0 !
         passwords=["admin","bob","adam3"]
         with open("tests/fixtures/test_Users.json", "r", encoding="utf-8" ) as f:
-            users = json.load(f)
+            self._users_jsonload = json.load(f)
             # when you work with list type, zip is better than enumerate
-        for u, p in zip(users,passwords):
+        for u, p in zip(self._users_jsonload,passwords):
             hashed = UserMenager._hash_password(p)
             if u.get("is_admin"):
                 is_adm=u.get("is_admin")
@@ -73,6 +71,8 @@ class Test(unittest.TestCase):
             self.curs.execute(""" INSERT INTO users (username, password_hash, is_admin) VALUES (?,?,?);""", 
                             (u["username"],hashed, is_adm)) 
             
+        self.conn.commit()
+
         ### messages
         self.curs.execute("DELETE FROM messages;")
         with open("tests/fixtures/test_Messages.json", "r", encoding="utf-8" ) as f:
@@ -81,13 +81,11 @@ class Test(unittest.TestCase):
                 receiver_id=m.get("receiver")
                 sender_id=m.get("sender")
                 content=m.get("content")
-                print(receiver_id)
-                print(sender_id)
-                print(content)
-                
+
+                sender_id=self.database.get_id_by_user(sender_id)
+                receiver_id=self.database.get_id_by_user(receiver_id)
                 self.curs.execute(""" SELECT * FROM users""")
-                print(self.curs.fetchall())
-                print(f"Inserted user {u['username']} with ID {self.curs.lastrowid}")
+      #          print(self.curs.fetchall())
                 self.curs.execute(""" INSERT INTO messages (receiver_id, sender_id, message) VALUES (?,?,?)""", 
                             (receiver_id,sender_id, content))
                 
@@ -96,50 +94,51 @@ class Test(unittest.TestCase):
 
 
     def test_number_of_messages(self):   
+        self.curs.execute(""" SELECT * FROM users""")
         #max messages
-        result=self.service.number_message(1)
+        result=self.service.number_message(self.database.get_id_by_user("admin"))
         self.assertIn(result,"You have 5 messages. Your box messages is full. Please delete messages using del command")
 
         #1 message
-        result=self.service.number_message(2)
+        result=self.service.number_message(self.database.get_id_by_user("bob"))
         self.assertIn(result,"You have 1 messages")
         
         #no message
-        result=self.service.number_message(3)
+        result=self.service.number_message(self.database.get_id_by_user("adam3"))
         self.assertIn(result,"You have 0 messages")
 
     def test_read_message_all(self):
 
         #max messages
         self.user.logged_user='admin'
-        self.user.logged_user_id=1
+        self.user.logged_user_id=self.database.get_id_by_user("admin")
         self.user.logged_admin=True
         result=self.service.handle_message_command("rd",self.user)
         self.assertIn("Your's box messages is full. Please delete messages using del command",result)
 
         #1 message
         self.user.logged_user='bob'
-        self.user.logged_user_id=2
+        self.user.logged_user_id=self.database.get_id_by_user("bob")
         result=self.service.handle_message_command("rd",self.user)
         self.assertIn("hello bob it's admin",result)
 
         #last message
         self.user.logged_user='admin'
-        self.user.logged_user_id=1
+        self.user.logged_user_id=self.database.get_id_by_user("admin")
         self.user.logged_admin=True
         result=self.service.handle_message_command("rd",self.user)
         self.assertIn("HElloo 1 it's 2 Messagne number 3",result)
 
         #no message
         self.user.logged_user='adam3'
-        self.user.logged_user_id=3
+        self.user.logged_user_id=self.database.get_id_by_user("adam3")
         result=self.service.handle_message_command("rd",self.user)
         self.assertIn(result,"You dont have any messages")
 
     def test_admin_rd(self):
         #login as a admin for a tests
         self.user.logged_user='admin'
-        self.user.logged_user_id=1
+        self.user.logged_user_id=self.database.get_id_by_user("admin")
         self.user.logged_admin=True
 
         result=self.service.handle_message_command("admin_rd bob",self.user)
@@ -159,7 +158,7 @@ class Test(unittest.TestCase):
 
         #login as a bob for a tests
         self.user.logged_user='bob'
-        self.user.logged_user_id=2
+        self.user.logged_user_id=self.database.get_id_by_user("bob")
         self.user.logged_admin=False
 
         #write a new message
@@ -170,7 +169,7 @@ class Test(unittest.TestCase):
 
         #login as a bob for a tests
         self.user.logged_user='adam3'
-        self.user.logged_user_id=3
+        self.user.logged_user_id=self.database.get_id_by_user("adam3")
 
         #check if messages is saved
         result=self.service.handle_message_command("rd",self.user)
@@ -180,7 +179,7 @@ class Test(unittest.TestCase):
     def test_delete_message(self):
         #login as a bob for a tests
         self.user.logged_user='bob'
-        self.user.logged_user_id=2
+        self.user.logged_user_id=self.database.get_id_by_user("bob")
 
         #no message number specified
         result=self.service.handle_message_command("del",self.user)
@@ -199,7 +198,7 @@ class Test(unittest.TestCase):
     def test_admin_del(self):
         #login as a admin for a tests
         self.user.logged_user='admin'
-        self.user.logged_user_id=1
+        self.user.logged_user_id=self.database.get_id_by_user("admin")
         self.user.logged_admin=True
 
         result=self.service.handle_message_command("admin_del admin 1",self.user)
