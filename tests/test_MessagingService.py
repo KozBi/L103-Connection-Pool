@@ -7,7 +7,7 @@ from my_classes.UserMenager import UserMenager
 from my_classes.dbConnectionPool import ConnectionPool
 class Test(unittest.TestCase):
 
-    #classmethod,  to run only once connection to temp database
+   #classmethod,  to run only once connection to temp database
     @classmethod
     def setUpClass(cls):
 
@@ -37,10 +37,10 @@ class Test(unittest.TestCase):
                 );
             """)
         cls.conn.commit()
-        
+              
     
     def setUp(self):   
-        self.cp=ConnectionPool("test.db")
+        self.cp=ConnectionPool("test.db",conn_idle_timeout=0,max_connection=1,min_connetion=1,instant_colse=True)
         self.conn=self.cp.get_connection()
         self.curs=self.conn.cursor()
 
@@ -48,11 +48,19 @@ class Test(unittest.TestCase):
         self.reset_database()
         self.service=MessagingService(self.database)
         self.user=UserMenager(self.database)
+        print(self.cp.used_connection())
 
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.conn.close()
+    def tearDown(self):
+        #       self.cp.release_connection(self.conn)
+        print(self.cp.used_connection())
+        print(self.conn)
+    #    self.cp.release_connection(self.conn)
+        print(self.cp.used_connection())
+        print("wykonalem test")
+        self.curs.close()
+        self.conn.close()
+        #return super().tearDown()
 
     #reset test_mailbox each tim when test is called.
     def reset_database(self):
@@ -71,8 +79,9 @@ class Test(unittest.TestCase):
             self.curs.execute(""" INSERT INTO users (username, password_hash, is_admin) VALUES (?,?,?);""", 
                             (u["username"],hashed, is_adm)) 
             
+        print(len(self.cp.connections))
         self.conn.commit()
-
+        
         ### messages
         self.curs.execute("DELETE FROM messages;")
         with open("tests/fixtures/test_Messages.json", "r", encoding="utf-8" ) as f:
@@ -89,8 +98,8 @@ class Test(unittest.TestCase):
                 self.curs.execute(""" INSERT INTO messages (receiver_id, sender_id, message) VALUES (?,?,?)""", 
                             (receiver_id,sender_id, content))
                 
-                
         self.conn.commit()
+        
 
 
     def test_number_of_messages(self):   
@@ -134,6 +143,7 @@ class Test(unittest.TestCase):
         self.user.logged_user_id=self.database.get_id_by_user("adam3")
         result=self.service.handle_message_command("rd",self.user)
         self.assertIn(result,"You dont have any messages")
+      #  print(self.database.)
 
     def test_admin_rd(self):
         #login as a admin for a tests

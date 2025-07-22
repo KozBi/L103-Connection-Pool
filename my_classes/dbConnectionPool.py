@@ -41,10 +41,11 @@ class ConnectionPool:
         min_connection (int): Minimum number of connections to keep in pool.
         max_connection (int): Maximum number of connections allowed in pool.
     """
-    def __init__(self,database="database_file.db"):
-        self.min_connection=5
-        self.max_connection=99
-        self.conn_idle_timeout=2 # Max idle time in seconds before closing connections
+    def __init__(self,database="database_file.db",conn_idle_timeout=2,min_connetion=5,max_connection=99,instant_colse=False):
+        self.min_connection=min_connetion
+        self.max_connection=max_connection
+        self.conn_idle_timeout=conn_idle_timeout # Max idle time in seconds before closing connections
+        self.instant_colse=instant_colse
 
         self.database = database
 
@@ -86,6 +87,12 @@ class ConnectionPool:
 
                 connection.in_use=False
                 connection.last_used_time=time.time()
+
+                if self.instant_colse:
+                    curr=connection.cursor()
+                    curr.close()
+                    connection.close()
+                    
                 return
             else:
                 raise ValueError("This connection does not belong to the Pool!")
@@ -106,7 +113,7 @@ class ConnectionPool:
                 while len(self.connections)<self.min_connection:
                     self._create_new_connection()
 
-                for conn in (self.connections[5:]):
+                for conn in (self.connections[self.min_connection:]):
                     
                     # #delete broken connection 
                     # if conn.conn.closed !=0 and conn.in_use:
@@ -123,6 +130,11 @@ class ConnectionPool:
                 for deleted_conn in l_deleted_conn:
                     self.connections.remove(deleted_conn)
             time.sleep(self.conn_idle_timeout)
+
+    def used_connection(self):
+        """Return numbers of used connections"""
+        in_use_counter = sum(1 for _conn in self.connections if _conn.in_use)
+        return in_use_counter
 
 
     
